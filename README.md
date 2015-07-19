@@ -2,4 +2,4 @@
 
 mpv-remote rewrite with websockets.
 
-Dependencies: https://github.com/siikamiika/mpv-python-ipc
+Dependencies: tornado, https://github.com/siikamiika/mpv-python-ipc
