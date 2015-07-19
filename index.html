@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>mpv-remote-ws</title>
+</head>
+<body>
+<input type="text" id="commandv">
+<p id="info"></p>
+<script>
+var ws = new WebSocket('ws://' + window.location.host + '/ws');
+
+ws.onopen = function(){
+
+};
+
+ws.onmessage = function(ev){
+    document.getElementById('info').innerHTML = ev.data;
+};
+
+ws.onclose = function(ev){
+
+};
+
+ws.onerror = function(ev){
+
+};
+
+document.getElementById('commandv').onkeyup = function(e) {
+    if (e.keyCode == 13) {
+        var text = this.value;
+        var data = JSON.stringify({type: 'commandv', args: text.split(' ')})
+        ws.send(data);
+        this.value = '';
+    }
+}
+window.onload = function() {
+    setTimeout(function(){
+        ws.send(JSON.stringify({type: 'commandv', args: ['loadfile', 'E:\\musa\\test.mp3']}))
+        ws.send(JSON.stringify({type: 'observe_property', args: ['percent-pos']}))
+    }, 3000);
+}
+</script>
+</body>
+</html>
