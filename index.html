@@ -4,9 +4,13 @@
     <title>mpv-remote-ws</title>
 </head>
 <body>
-<input type="text" id="commandv">
-<p id="info"></p>
+<h1 id="title"></h1>
+<p id="pos"></p>
+<p>idle: <span id="idle"></span></p>
 <script>
+var ws_req_id = 0;
+var ws_onmessage_handlers = {};
+
 var ws = new WebSocket('ws://' + window.location.host + '/ws');
 
 ws.onopen = function(){
@@ -14,7 +18,12 @@ ws.onopen = function(){
 };
 
 ws.onmessage = function(ev){
-    document.getElementById('info').innerHTML = ev.data;
+    var response = JSON.parse(ev.data);
+    if (response.id in ws_onmessage_handlers) {
+        ws_onmessage_handlers[response.id](response.result);
+        if (typeof response.id === 'number')
+            delete ws_onmessage_handlers[response.id];
+    }
 };
 
 ws.onclose = function(ev){
@@ -25,19 +34,57 @@ ws.onerror = function(ev){
 
 };
 
-document.getElementById('commandv').onkeyup = function(e) {
-    if (e.keyCode == 13) {
-        var text = this.value;
-        var data = JSON.stringify({type: 'commandv', args: text.split(' ')})
-        ws.send(data);
-        this.value = '';
+var mp = {
+    get_property: function(name, cb, _native) {
+        var method = 'get_property';
+        if (_native) method += '_native';
+        if (cb) ws_onmessage_handlers[ws_req_id] = cb;
+        this._send_message(method, [name]);
+    },
+
+    get_property_native: function(name, cb) {
+        get_property(name, cb, true);
+    },
+
+    set_property: function(name, val, cb) {
+        var method = 'set_property';
+        if (cb) ws_onmessage_handlers[ws_req_id] = cb;
+        this._send_message(method, [val]);
+    },
+
+    commandv: function(params, cb) {
+        var method = 'commandv';
+        if (cb) ws_onmessage_handlers[ws_req_id] = cb;
+        this._send_message(method, params);
+    },
+
+    _send_message: function(method, params) {
+        ws.send(JSON.stringify({
+            method: 'mpv_command',
+            params: {
+                method: method,
+                params: params
+            },
+            id: ws_req_id
+        }));
+        ws_req_id += 1;
     }
 }
-window.onload = function() {
-    setTimeout(function(){
-        ws.send(JSON.stringify({type: 'commandv', args: ['loadfile', 'E:\\musa\\test.mp3']}))
-        ws.send(JSON.stringify({type: 'observe_property', args: ['percent-pos']}))
-    }, 3000);
+
+ws_onmessage_handlers['media-title'] = function(data) {
+    document.getElementById('title').innerHTML = data;
+}
+
+ws_onmessage_handlers['time-pos'] = function(data) {
+    document.getElementById('pos').innerHTML = data;
+}
+
+ws_onmessage_handlers['idle'] = function(data) {
+    document.getElementById('idle').innerHTML = data;
+}
+
+var debug = function (text) {
+    console.log(text);
 }
 </script>
 </body>

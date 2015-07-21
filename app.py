@@ -4,31 +4,41 @@ from mpv_python_ipc import MpvProcess
 
 clients = []
 
+class MpvInstance(MpvProcess):
+    def observe_properties(self, properties):
+        def inform_clients(prop, val):
+            message = json.dumps(dict(id=prop, result=val))
+            for c in clients:
+                c.write_message(message)
+        for p in properties:
+            self.observe_property(p, inform_clients)
+
 class Message(object):
     def __init__(self, msg):
-        self.type = msg.get('type')
-        self.args = msg.get('args')
+        self.method = msg.get('method')
+        self.params = msg.get('params')
+        self.id = msg.get('id')
 
-    def handle(self):
-        if self.type == 'commandv':
-            mp.commandv(*self.args)
-        elif self.type == 'get_property':
-            value = mp.get_property(self.args[0])
-        elif self.type == 'get_property_native':
-            value = mp.get_property_native(self.args[0])
-        elif self.type == 'set_property':
-            mp.set_property(self.args[0], self.args[1])
-        elif self.type == 'register_event':
-            value = mp.register_event(self.args[0], lambda: print(self.args[0]))
-        elif self.type == 'unregister_event':
-            value = mp.unregister_event(self.args[0])
-        elif self.type == 'observe_property':
-            def send_property_change(name, value):
-                for c in clients:
-                    c.write_message(json.dumps([name, value]))
-            mp.observe_property(self.args[0], send_property_change)
-        elif self.type == 'unobserve_property':
-            value = mp.unobserve_property(self.args[0])
+    def handle(self, connection):
+        if self.method == 'mpv_command':
+            mpv_command = self.params['method']
+            params = self.params['params']
+            if mpv_command == 'commandv':
+                response = mp.commandv(*params)
+                response = json.dumps(dict(result=response, id=self.id))
+                connection.write_message(response)
+            elif mpv_command == 'get_property':
+                value = mp.get_property(params[0])
+                response = json.dumps(dict(result=value, id=self.id))
+                connection.write_message(response)
+            elif mpv_command == 'get_property_native':
+                value = mp.get_property_native(params[0])
+                response = json.dumps(dict(result=value, id=self.id))
+                connection.write_message(json.dumps(value))
+            elif mpv_command == 'set_property':
+                mp.set_property(params[0], params[1])
+                response = json.dumps(dict(result=[], id=self.id))
+                connection.write_message(json.dumps(response))
 
 
 class IndexHandler(web.RequestHandler):
@@ -36,8 +46,6 @@ class IndexHandler(web.RequestHandler):
         self.render("index.html")
 
 class WsHandler(websocket.WebSocketHandler):
-    def check_origin(self, origin):
-        return True
 
     def open(self):
         if self not in clients:
@@ -46,7 +54,7 @@ class WsHandler(websocket.WebSocketHandler):
     def on_message(self, message):
         message = json.loads(message)
         message = Message(message)
-        message.handle()
+        message.handle(self)
 
     def on_close(self):
         if self in clients:
@@ -69,6 +77,8 @@ app = web.Application([
 ])
 
 if __name__ == '__main__':
-    mp = MpvProcess()
+    mp = MpvInstance(debug=True, args=['--screen=1'])
+    mp.observe_properties(['media-title', 'time-pos', 'idle'])
     app.listen(9875)
-    ioloop.IOLoop.instance().start()
+    main_loop = ioloop.IOLoop.instance()
+    main_loop.start()
