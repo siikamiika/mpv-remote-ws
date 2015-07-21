@@ -47,13 +47,13 @@ var mp = {
     },
 
     get_property_native: function(name, cb) {
-        get_property(name, cb, true);
+        this.get_property(name, cb, true);
     },
 
     set_property: function(name, val, cb) {
         var method = 'set_property';
         if (cb) ws_onmessage_handlers[ws_req_id] = cb;
-        this._send_message(method, [val]);
+        this._send_message(method, [name, val]);
     },
 
     commandv: function(params, cb) {
