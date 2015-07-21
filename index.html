@@ -9,6 +9,8 @@
 <h1 id="title"></h1>
 <p id="pos"></p>
 <p>idle: <span id="idle"></span></p>
+<p id="filebrowser"></p>
+<p id="remote"></p>
 <script>
 // websocket init
 var ws_req_id = 0;
@@ -67,6 +69,58 @@ var mp = {
         this._send_message(method, path);
     },
 
+    pause: function() {
+        this.commandv(['cycle', 'pause']);
+    },
+
+    stop: function() {
+        this.commandv(['stop']);
+    },
+
+    cycle_aspect: function() {
+        this.commandv(['osd-msg', 'cycle-values', 'video-aspect', '16:9', '4:3', '2.35:1', '-1']);
+    },
+
+    set_vol: function(val) {
+        this.commandv(['osd-msg-bar', 'set', 'volume', val]);
+    },
+
+    seek: function(seconds) {
+        this.commandv(['osd-msg-bar', 'seek', seconds]);
+    },
+
+    chapter: function(amount) {
+        this.commandv(['osd-msg-bar', 'add', 'chapter', amount]);
+    },
+
+    chapter_next: function() {
+        this.chapter(1);
+    },
+
+    chapter_prev: function() {
+        this.chapter(-1);
+    },
+
+    subdelay: function(seconds) {
+        this.commandv(['osd-msg', 'add', 'sub-delay', seconds]);
+    },
+
+    audiodelay: function(seconds) {
+        this.commandv(['osd-msg', 'add', 'audio-delay', seconds]);
+    },
+
+    cycle_sub: function() {
+        this.commandv(['osd-msg', 'cycle', 'sub']);
+    },
+
+    cycle_audio: function() {
+        this.commandv(['osd-msg', 'cycle', 'audio']);
+    },
+
+    toggle_drc: function() {
+        this.commandv(['osd-msg', 'af', 'toggle', 'drc']);
+    },
+
     _send_message: function(method, params) {
         ws.send(JSON.stringify({
             method: 'mpv_command',
@@ -80,15 +134,42 @@ var mp = {
     }
 }
 
-// path commands
-var get_folder_content = function(path, cb) {
-    ws_onmessage_handlers[ws_req_id] = cb;
-    ws.send(JSON.stringify({
-        method: 'folder_content',
-        params: path,
-        id: ws_req_id
-    }));
-    ws_req_id += 1;
+// UI
+var filebrowser = {
+    path: [],
+
+    open: function(path) {
+        this.path = path;
+        this.get_folder_content(path, this.render);
+    },
+
+    get_folder_content: function(path, cb) {
+        ws_onmessage_handlers[ws_req_id] = cb;
+        ws.send(JSON.stringify({
+            method: 'folder_content',
+            params: path,
+            id: ws_req_id
+        }));
+        ws_req_id += 1;
+    },
+
+    render: function(content) {
+        document.getElementById('filebrowser').innerHTML = JSON.stringify(content);
+    },
+
+    hide: function() {
+        document.getElementById('filebrowser').innerHTML = '';
+    }
+}
+
+var remote = {
+    render: function() {
+        document.getElementById('remote').innerHTML = 'TODO';
+    },
+
+    hide: function() {
+        document.getElementById('remote').innerHTML = '';
+    }
 }
 
 // other stuff
