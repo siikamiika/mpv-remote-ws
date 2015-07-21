@@ -3,6 +3,10 @@ import json
 from mpv_python_ipc import MpvProcess
 from pathlib import Path
 import os
+from os.path import splitext, dirname, realpath, expanduser
+
+script_path = Path(dirname(realpath(__file__)))
+
 
 clients = []
 
@@ -29,6 +33,7 @@ class WsHandler(websocket.WebSocketHandler):
 def get_app():
     return web.Application([
         (r'/', IndexHandler),
+        (r'/static/(.*)', web.StaticFileHandler, {'path': str(script_path / 'static')}),
         (r'/ws', WsHandler),
     ])
 
