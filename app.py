@@ -1,49 +1,16 @@
 from tornado import websocket, web, ioloop
 import json
 from mpv_python_ipc import MpvProcess
+from pathlib import Path
+import os
 
 clients = []
-
-class MpvInstance(MpvProcess):
-    def observe_properties(self, properties):
-        def inform_clients(prop, val):
-            message = json.dumps(dict(id=prop, result=val))
-            for c in clients:
-                c.write_message(message)
-        for p in properties:
-            self.observe_property(p, inform_clients)
-
-class Message(object):
-    def __init__(self, msg):
-        self.method = msg.get('method')
-        self.params = msg.get('params')
-        self.id = msg.get('id')
-
-    def handle(self, connection):
-        if self.method == 'mpv_command':
-            mpv_command = self.params['method']
-            params = self.params['params']
-            if mpv_command == 'commandv':
-                response = mp.commandv(*params)
-                response = json.dumps(dict(result=response, id=self.id))
-                connection.write_message(response)
-            elif mpv_command == 'get_property':
-                value = mp.get_property(params[0])
-                response = json.dumps(dict(result=value, id=self.id))
-                connection.write_message(response)
-            elif mpv_command == 'get_property_native':
-                value = mp.get_property_native(params[0])
-                response = json.dumps(dict(result=value, id=self.id))
-                connection.write_message(json.dumps(value))
-            elif mpv_command == 'set_property':
-                mp.set_property(params[0], params[1])
-                response = json.dumps(dict(result=[], id=self.id))
-                connection.write_message(json.dumps(response))
 
 
 class IndexHandler(web.RequestHandler):
     def get(self):
         self.render("index.html")
+
 
 class WsHandler(websocket.WebSocketHandler):
 
@@ -52,33 +19,127 @@ class WsHandler(websocket.WebSocketHandler):
             clients.append(self)
 
     def on_message(self, message):
-        message = json.loads(message)
-        message = Message(message)
-        message.handle(self)
+        mpv_remote.handle_message(message, self)
 
     def on_close(self):
         if self in clients:
             clients.remove(self)
 
-class ApiHandler(web.RequestHandler):
 
-    @web.asynchronous
-    def get(self, *args):
-        self.finish()
+def get_app():
+    return web.Application([
+        (r'/', IndexHandler),
+        (r'/ws', WsHandler),
+    ])
 
-    @web.asynchronous
-    def post(self):
-        pass
 
-app = web.Application([
-    (r'/', IndexHandler),
-    (r'/ws', WsHandler),
-    (r'/api', ApiHandler),
-])
+class FolderContent(object):
+
+    def __init__(self, path):
+        self.path = Path(*path)
+        if str(self.path) == 'WINROOT':
+            self._windows_drives()
+        else:
+            self._folder_content()
+
+    def get(self):
+        return dict(
+            path=self.path.parts,
+            content=self.content
+            )
+
+    def _item_info(self, item):
+        try:
+            _ = item.stat()
+            return dict(
+                path=item.parts,
+                type='dir' if item.is_dir() else 'file',
+                modified=_.st_mtime,
+                size=_.st_size
+                )
+        except Exception as e:
+            print(e)
+            return
+
+    def _folder_content(self):
+        self.content = []
+        try:
+            for item in self.path.iterdir():
+                i = self._item_info(item)
+                if i:
+                    self.content.append(i)
+        except Exception as e:
+            print(e)
+
+    def is_drive(self, d):
+        try: return d.is_dir()
+        except: return False
+
+    def _windows_drives(self):
+        drives = [Path('{}:\\'.format(c)) for c in map(chr, range(65, 91))]
+        drives = [self._item_info(d) for d in drives if self.is_drive(d)]
+        self.content = drives
+
+
+class Message(object):
+    def __init__(self, msg):
+        self.raw_msg = msg
+        self.parse()
+
+    def parse(self):
+        msg = json.loads(self.raw_msg)
+        self.method = msg['method']
+        self.params = msg['params']
+        self.id = msg['id']
+
+
+class MpvRemote(object):
+    def __init__(self):
+        self.player = MpvProcess(debug=True, args=['--screen=1'])
+        self.observe_properties(['media-title', 'time-pos', 'idle'])
+
+    def handle_message(self, message, client):
+        message = Message(message)
+        response = dict(id=message.id, result=None)
+        if message.method == 'mpv_command':
+            response['result'] = self.mpv_command(message.params)
+        elif message.method == 'folder_content':
+            response['result'] = FolderContent(message.params).get()
+        client.write_message(json.dumps(response))
+
+
+    def mpv_command(self, cmd):
+        command = cmd['method']
+        params = cmd['params']
+        result = None
+        if command == 'commandv':
+            result = self.player.commandv(*params)
+        elif command == 'get_property':
+            result = self.player.get_property(params[0])
+        elif command == 'get_property_native':
+            result = self.player.get_property_native(params[0])
+        elif command == 'set_property':
+            self.player.set_property(params[0], params[1])
+        elif command == 'play_file':
+            self.player.commandv('stop')
+            self.player.set_property('pause', 'no')
+            self.player.commandv('loadfile', os.path.join(*params))
+        return result
+
+    def observe_properties(self, properties):
+        def property_update(prop, val):
+            msg = dict(id=prop, result=val)
+            msg = json.dumps(msg)
+            for c in clients:
+                c.write_message(msg)
+        for p in properties:
+            self.player.observe_property(p, property_update)
+
+
 
 if __name__ == '__main__':
-    mp = MpvInstance(debug=True, args=['--screen=1'])
-    mp.observe_properties(['media-title', 'time-pos', 'idle'])
+    mpv_remote = MpvRemote()
+    app = get_app()
     app.listen(9875)
     main_loop = ioloop.IOLoop.instance()
     main_loop.start()
