@@ -48,7 +48,7 @@ var Connection = function(address) {
 }
 
 // mpv commands
-function MpvProcess() {};
+var MpvProcess = function() {};
 
 MpvProcess.prototype.get_property = function(name, cb, _native) {
     var method = 'get_property';
@@ -157,10 +157,7 @@ var sorting = function(attr, reverse) {
     }
 }
 
-var FileBrowser = function() {
-    this.path = [];
-    this.content = [];
-}
+var FileBrowser = function() {};
 
 FileBrowser.prototype.open = function(path) {
     this.get_folder_content(path, this.render);
