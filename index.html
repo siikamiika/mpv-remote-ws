@@ -12,126 +12,129 @@
 <div id="filebrowser"></div>
 <p id="remote"></p>
 <script>
+// namespace
+var MPV_REMOTE_WS = {};
 // websocket init
-var ws_req_id = 0;
-var ws_onmessage_handlers = {};
-
 var ws = new WebSocket('ws://' + window.location.host + '/ws');
-
 ws.onopen = function(){
-    filebrowser.open(['E:\\', 'torrent']);
-};
-
+    MPV_REMOTE_WS.filebrowser.open(['E:\\', 'torrent']);
+}
 ws.onmessage = function(ev){
     var response = JSON.parse(ev.data);
-    if (response.id in ws_onmessage_handlers) {
-        ws_onmessage_handlers[response.id](response.result);
+    if (response.id in MPV_REMOTE_WS.connection.onmessage_handlers) {
+        MPV_REMOTE_WS.connection.onmessage_handlers[response.id](response.result);
         if (typeof response.id === 'number')
-            delete ws_onmessage_handlers[response.id];
+            delete MPV_REMOTE_WS.connection.onmessage_handlers[response.id];
     }
-};
-
+}
 ws.onclose = function(ev){
 
-};
-
+}
 ws.onerror = function(ev){
 
-};
+}
+
+var Connection = function(address) {
+    this.req_id = 0;
+    this.onmessage_handlers = {};
+
+    this.send = function(data, cb) {
+        if (cb)
+            this.onmessage_handlers[this.req_id] = cb;
+        data.id = this.req_id;
+        this.req_id += 1;
+        MPV_REMOTE_WS.ws.send(JSON.stringify(data));
+    }
+}
 
 // mpv commands
-var mp = {
-    get_property: function(name, cb, _native) {
-        var method = 'get_property';
-        if (_native) method += '_native';
-        if (cb) ws_onmessage_handlers[ws_req_id] = cb;
-        this._send_message(method, [name]);
-    },
+function MpvProcess() {};
 
-    get_property_native: function(name, cb) {
-        this.get_property(name, cb, true);
-    },
+MpvProcess.prototype.get_property = function(name, cb, _native) {
+    var method = 'get_property';
+    if (_native) method += '_native';
+    this._send_message(method, [name], cb);
+}
 
-    set_property: function(name, val, cb) {
-        var method = 'set_property';
-        if (cb) ws_onmessage_handlers[ws_req_id] = cb;
-        this._send_message(method, [name, val]);
-    },
+MpvProcess.prototype.get_property_native = function(name, cb) {
+    this.get_property(name, cb, true);
+}
 
-    commandv: function(params, cb) {
-        var method = 'commandv';
-        if (cb) ws_onmessage_handlers[ws_req_id] = cb;
-        this._send_message(method, params);
-    },
+MpvProcess.prototype.set_property = function(name, val, cb) {
+    var method = 'set_property';
+    this._send_message(method, [name, val], cb);
+}
 
-    play_file: function(path) {
-        var method = 'play_file';
-        this._send_message(method, path);
-    },
+MpvProcess.prototype.commandv = function(params, cb) {
+    var method = 'commandv';
+    this._send_message(method, params, cb);
+}
 
-    pause: function() {
-        this.commandv(['cycle', 'pause']);
-    },
+MpvProcess.prototype.play_file = function(path) {
+    var method = 'play_file';
+    this._send_message(method, path);
+}
 
-    stop: function() {
-        this.commandv(['stop']);
-    },
+MpvProcess.prototype.pause = function() {
+    this.commandv(['cycle', 'pause']);
+}
 
-    cycle_aspect: function() {
-        this.commandv(['osd-msg', 'cycle-values', 'video-aspect', '16:9', '4:3', '2.35:1', '-1']);
-    },
+MpvProcess.prototype.stop = function() {
+    this.commandv(['stop']);
+}
 
-    set_vol: function(val) {
-        this.commandv(['osd-msg-bar', 'set', 'volume', val]);
-    },
+MpvProcess.prototype.cycle_aspect = function() {
+    this.commandv(['osd-msg', 'cycle-values', 'video-aspect', '16:9', '4:3', '2.35:1', '-1']);
+}
 
-    seek: function(seconds) {
-        this.commandv(['osd-msg-bar', 'seek', seconds]);
-    },
+MpvProcess.prototype.set_vol = function(val) {
+    this.commandv(['osd-msg-bar', 'set', 'volume', val]);
+}
 
-    chapter: function(amount) {
-        this.commandv(['osd-msg-bar', 'add', 'chapter', amount]);
-    },
+MpvProcess.prototype.seek = function(seconds) {
+    this.commandv(['osd-msg-bar', 'seek', seconds]);
+}
 
-    chapter_next: function() {
-        this.chapter(1);
-    },
+MpvProcess.prototype.chapter = function(amount) {
+    this.commandv(['osd-msg-bar', 'add', 'chapter', amount]);
+}
 
-    chapter_prev: function() {
-        this.chapter(-1);
-    },
+MpvProcess.prototype.chapter_next = function() {
+    this.chapter(1);
+}
 
-    subdelay: function(seconds) {
-        this.commandv(['osd-msg', 'add', 'sub-delay', seconds]);
-    },
+MpvProcess.prototype.chapter_prev = function() {
+    this.chapter(-1);
+}
 
-    audiodelay: function(seconds) {
-        this.commandv(['osd-msg', 'add', 'audio-delay', seconds]);
-    },
+MpvProcess.prototype.subdelay = function(seconds) {
+    this.commandv(['osd-msg', 'add', 'sub-delay', seconds]);
+}
 
-    cycle_sub: function() {
-        this.commandv(['osd-msg', 'cycle', 'sub']);
-    },
+MpvProcess.prototype.audiodelay = function(seconds) {
+    this.commandv(['osd-msg', 'add', 'audio-delay', seconds]);
+}
 
-    cycle_audio: function() {
-        this.commandv(['osd-msg', 'cycle', 'audio']);
-    },
+MpvProcess.prototype.cycle_sub = function() {
+    this.commandv(['osd-msg', 'cycle', 'sub']);
+}
 
-    toggle_drc: function() {
-        this.commandv(['osd-msg', 'af', 'toggle', 'drc']);
-    },
+MpvProcess.prototype.cycle_audio = function() {
+    this.commandv(['osd-msg', 'cycle', 'audio']);
+}
 
-    _send_message: function(method, params) {
-        ws.send(JSON.stringify({
-            method: 'mpv_command',
-            params: {
-                method: method,
-                params: params
-            },
-            id: ws_req_id
-        }));
-        ws_req_id += 1;
-    }
+MpvProcess.prototype.toggle_drc = function() {
+    this.commandv(['osd-msg', 'af', 'toggle', 'drc']);
+}
+
+MpvProcess.prototype._send_message = function(method, params, cb) {
+    MPV_REMOTE_WS.connection.send({
+        method: 'mpv_command',
+        params: {
+            method: method,
+            params: params
+        }
+    }, cb);
 }
 
 // UI
@@ -154,115 +157,119 @@ var sorting = function(attr, reverse) {
     }
 }
 
-var filebrowser = {
-    path: [],
-    content: [],
-
-    open: function(path) {
-        filebrowser.get_folder_content(path, filebrowser.render);
-    },
-
-    get_folder_content: function(path, cb) {
-        ws_onmessage_handlers[ws_req_id] = cb;
-        ws.send(JSON.stringify({
-            method: 'folder_content',
-            params: path,
-            id: ws_req_id
-        }));
-        ws_req_id += 1;
-    },
-
-    render: function(content) {
-        filebrowser.path = content.path;
-        filebrowser.content = content.content;
-
-        var files = filebrowser.content.filter(function(i) {
-            return i.type == 'file';
-        }).sort(sorting('path'));
-
-        var folders = filebrowser.content.filter(function(i) {
-            return i.type == 'dir';
-        }).sort(sorting('modified', true));
-
-        var sorted_content = [];
-        var first = 'folders';
-        if (first == 'folders') {
-            sorted_content = folders.concat(files);
-        }
-        else if (first == 'files') {
-            sorted_content = files.concat(folders);
-        }
-
-
-        var filebrowser_element = document.getElementById('filebrowser');
-        filebrowser_element.innerHTML = '';
-
-        var path_listing = document.createElement('ul');
-        var dir_listing = document.createElement('ul');
-        filebrowser_element.appendChild(path_listing);
-        filebrowser_element.appendChild(dir_listing);
-
-        var activate_path_link = function(link, i) {
-            link.onclick = function() {
-                filebrowser.open(filebrowser.path.slice(0, i + 1));
-                return false;
-            }
-        }
-
-        for (var i = 0; i < filebrowser.path.length; i++) {
-            var link = document.createElement('a');
-            link.href = '#';
-            link.innerHTML = filebrowser.path[i];
-            activate_path_link(link, i);
-            var li = document.createElement('li');
-            li.appendChild(link);
-            path_listing.appendChild(li);
-        }
-
-        sorted_content.forEach(function(i) {
-            var link = document.createElement('a');
-            link.href = '#';
-            link.innerHTML = i.path[i.path.length - 1];
-            link.onclick = function() {
-                if (i.type == 'file')
-                    mp.play_file(i.path);
-                else if (i.type == 'dir')
-                    filebrowser.open(i.path);
-                return false;
-            }
-            var li = document.createElement('li');
-            li.appendChild(link);
-            dir_listing.appendChild(li);
-        });
-    },
-
-    hide: function() {
-        document.getElementById('filebrowser').innerHTML = '';
-    }
+var FileBrowser = function() {
+    this.path = [];
+    this.content = [];
 }
 
-var remote = {
-    render: function() {
-        document.getElementById('remote').innerHTML = 'TODO';
-    },
-
-    hide: function() {
-        document.getElementById('remote').innerHTML = '';
-    }
+FileBrowser.prototype.open = function(path) {
+    this.get_folder_content(path, this.render);
 }
+
+FileBrowser.prototype.get_folder_content = function(path, cb) {
+    MPV_REMOTE_WS.connection.send({
+        method: 'folder_content',
+        params: path
+    }, cb);
+}
+
+FileBrowser.prototype.render = function(content) {
+    var _this = this;
+    this.path = content.path;
+    this.content = content.content;
+
+    var files = this.content.filter(function(i) {
+        return i.type == 'file';
+    }).sort(sorting('path'));
+
+    var folders = this.content.filter(function(i) {
+        return i.type == 'dir';
+    }).sort(sorting('modified', true));
+
+    var sorted_content = [];
+    var first = 'folders';
+    if (first == 'folders') {
+        sorted_content = folders.concat(files);
+    }
+    else if (first == 'files') {
+        sorted_content = files.concat(folders);
+    }
+
+
+    var filebrowser_element = document.getElementById('filebrowser');
+    filebrowser_element.innerHTML = '';
+
+    var path_listing = document.createElement('ul');
+    var dir_listing = document.createElement('ul');
+    filebrowser_element.appendChild(path_listing);
+    filebrowser_element.appendChild(dir_listing);
+
+    var activate_path_link = function(link, i) {
+        link.onclick = function() {
+            MPV_REMOTE_WS.filebrowser.open(_this.path.slice(0, i + 1));
+            return false;
+        }
+    }
+
+    for (var i = 0; i < this.path.length; i++) {
+        var link = document.createElement('a');
+        link.href = '#';
+        link.innerHTML = this.path[i];
+        activate_path_link(link, i);
+        var li = document.createElement('li');
+        li.appendChild(link);
+        path_listing.appendChild(li);
+    }
+
+    sorted_content.forEach(function(i) {
+        var link = document.createElement('a');
+        link.href = '#';
+        link.innerHTML = i.path[i.path.length - 1];
+        link.onclick = function() {
+            if (i.type == 'file')
+                MPV_REMOTE_WS.mp.play_file(i.path);
+            else if (i.type == 'dir')
+                MPV_REMOTE_WS.filebrowser.open(i.path);
+            return false;
+        }
+        var li = document.createElement('li');
+        li.appendChild(link);
+        dir_listing.appendChild(li);
+    });
+}
+
+FileBrowser.prototype.hide = function() {
+    document.getElementById('filebrowser').innerHTML = '';
+}
+
+// instantiation
+MPV_REMOTE_WS.ws = ws;
+MPV_REMOTE_WS.mp = new MpvProcess();
+MPV_REMOTE_WS.filebrowser = new FileBrowser();
+MPV_REMOTE_WS.connection = new Connection();
+
+// var remote = {
+//     render: function() {
+//         document.getElementById('remote').innerHTML = 'TODO';
+//     },
+
+//     hide: function() {
+//         document.getElementById('remote').innerHTML = '';
+//     }
+// }
 
 // other stuff
-ws_onmessage_handlers['media-title'] = function(data) {
-    document.getElementById('title').innerHTML = data;
-}
+// ws_onmessage_handlers['media-title'] = function(data) {
+//     document.getElementById('title').innerHTML = data;
+// }
 
-ws_onmessage_handlers['time-pos'] = function(data) {
-    document.getElementById('pos').innerHTML = data;
-}
+// ws_onmessage_handlers['time-pos'] = function(data) {
+//     document.getElementById('pos').innerHTML = data;
+// }
 
-ws_onmessage_handlers['idle'] = function(data) {
-    document.getElementById('idle').innerHTML = data;
-}
+// ws_onmessage_handlers['idle'] = function(data) {
+//     document.getElementById('idle').innerHTML = data;
+// }
 
 var debug = function (text) {
     console.log(text);
