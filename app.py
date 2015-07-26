@@ -100,8 +100,8 @@ class Message(object):
 
 class MpvRemote(object):
     def __init__(self):
-        self.player = MpvProcess(debug=True, args=['--screen=1'])
-        self.observe_properties(['media-title', 'time-pos', 'idle'])
+        self.player = MpvProcess(debug=True, args=[])
+        self.observe_properties(['media-title', 'idle'])
 
     def handle_message(self, message, client):
         message = Message(message)
