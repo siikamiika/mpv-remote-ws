@@ -1,4 +1,4 @@
-.remote {
+#remote {
     -webkit-touch-callout: none;
     -webkit-user-select: none;
     -khtml-user-select: none;
@@ -7,11 +7,11 @@
     user-select: none;
 }
 
-.remote table {
+#remote table {
     width: 100%;
 }
 
-.remote td {
+#remote td {
     text-align: center;
 }
 
@@ -19,7 +19,7 @@ i {
     min-width: 1em;
 }
 
-.remote .fa {
+#remote .fa {
     font-size: 50px; /* fallback */
     font-size: 15vmin;
 }

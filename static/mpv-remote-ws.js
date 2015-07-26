@@ -238,7 +238,6 @@ FileBrowser.prototype = {
                 link.innerHTML = i.path[i.path.length - 1];
                 link.onclick = function() {
                     if (i.type == 'file') {
-                        MPV_REMOTE_WS.remote.render();
                         MPV_REMOTE_WS.mp.play_file(i.path);
                     }
                     else if (i.type == 'dir')
@@ -260,11 +259,66 @@ FileBrowser.prototype = {
 
 var Remote = function() {};
 
+
+var activate_repeating_control = function(button) {
+    var press_button = function(command) {
+        release_button(command);
+        window.pressed_buttons[command + '_timeout'] = setTimeout(function() {
+            var interval_id = setInterval(function() {
+                if (!window.pressed) {
+                    clearInterval(interval_id);
+                }
+                else {
+                    eval(command);
+                }
+            }, 50);
+            window.pressed_buttons[command + '_interval'] = interval_id;
+        }, 500);
+    }
+
+    var release_button = function(command) {
+        clearTimeout(pressed_buttons[command + '_timeout']);
+        clearInterval(pressed_buttons[command + '_interval']);
+    }
+
+    var command = button.getAttribute('onclick');
+    if ('ontouchstart' in window) {
+        button.addEventListener('touchstart', function() {press_button(command)}, false);
+        button.addEventListener('touchend', function() {release_button(command)}, false);
+    }
+    else {
+        button.addEventListener('mousedown', function() {press_button(command)}, false);
+        button.addEventListener('mouseup', function() {release_button(command)}, false);
+    }
+}
+
 Remote.prototype = {
 
     render: function() {
         XHR('GET', 'static/remote.html?' + MPV_REMOTE_WS.cache_buster, null, function(data) {
             document.getElementById('remote').innerHTML = data;
+
+            // repeated buttons
+            window.pressed = false;
+            window.pressed_buttons = {};
+
+            if ('ontouchstart' in window) {
+                window.ontouchstart = function () {window.pressed = true};
+                window.ontouchend = function () {window.pressed = false};
+                window.onorientationchange = function () {window.pressed = false};
+            }
+            else {
+                window.onmousedown = function () {window.pressed = true};
+                window.onmouseup = function () {window.pressed = false};
+            }
+
+            var repeating_controls = document.getElementsByClassName('repeat');
+
+            for (var i = 0; i < repeating_controls.length; i++) {
+                activate_repeating_control(repeating_controls[i]);
+            }
+
+            // restore old volume bar location
             var vol_element = document.getElementById('vol');
             if (localStorage.volume) {
                 vol_element.value = localStorage.volume;
@@ -281,7 +335,8 @@ Remote.prototype = {
         var vol = vol_input.value;
         localStorage.volume = vol;
         MPV_REMOTE_WS.mp.set_vol(vol);
-    }
+    },
+
 }
 
 // instantiation
@@ -294,17 +349,25 @@ MPV_REMOTE_WS.connection = new Connection(function(){
         path = JSON.parse(localStorage.last_dir);
     }
     MPV_REMOTE_WS.filebrowser.open(path);
+
+    // observed properties
+    var title = MPV_REMOTE_WS.mp.get_property_native('media-title', function(data) {
+        if (data) document.getElementById('title').innerHTML = data;
+    });
+    MPV_REMOTE_WS.connection.onmessage_handlers['media-title'] = function(data) {
+        document.getElementById('title').innerHTML = data;
+    }
+
+    MPV_REMOTE_WS.mp.get_property_native('idle', function(data) {
+        if (!(data === true)) MPV_REMOTE_WS.remote.render();
+    });
+    MPV_REMOTE_WS.connection.onmessage_handlers['idle'] = function(data) {
+        if (data === true)
+            MPV_REMOTE_WS.remote.hide();
+        else
+            MPV_REMOTE_WS.remote.render();
+    }
 });
-
-// observed properties
-MPV_REMOTE_WS.connection.onmessage_handlers['media-title'] = function(data) {
-    document.getElementById('title').innerHTML = data;
-}
-
-MPV_REMOTE_WS.connection.onmessage_handlers['idle'] = function(data) {
-    if (data === true)
-        MPV_REMOTE_WS.remote.hide();
-}
 
 // helpers
 var debug = function (text) {
