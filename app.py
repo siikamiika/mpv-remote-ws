@@ -42,6 +42,8 @@ class FolderContent(object):
 
     def __init__(self, path):
         self.path = Path(*path)
+        if str(self.path) == 'HOME':
+            self.path = Path(expanduser('~'))
         if str(self.path) == 'WINROOT':
             self._windows_drives()
         else:

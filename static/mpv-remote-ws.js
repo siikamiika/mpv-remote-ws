@@ -174,6 +174,7 @@ FileBrowser.prototype = {
 
     open: function(path) {
         this.get_folder_content(path, this.render);
+        localStorage.last_dir = JSON.stringify(path);
     },
 
     get_folder_content: function(path, cb) {
@@ -264,6 +265,10 @@ Remote.prototype = {
     render: function() {
         XHR('GET', 'static/remote.html?' + MPV_REMOTE_WS.cache_buster, null, function(data) {
             document.getElementById('remote').innerHTML = data;
+            var vol_element = document.getElementById('vol');
+            if (localStorage.volume) {
+                vol_element.value = localStorage.volume;
+            }
         });
     },
 
@@ -284,7 +289,11 @@ MPV_REMOTE_WS.filebrowser = new FileBrowser();
 MPV_REMOTE_WS.remote = new Remote();
 MPV_REMOTE_WS.mp = new MpvProcess();
 MPV_REMOTE_WS.connection = new Connection(function(){
-    MPV_REMOTE_WS.filebrowser.open(['C:\\']);
+    var path = ['HOME'];
+    if (localStorage.last_dir) {
+        path = JSON.parse(localStorage.last_dir);
+    }
+    MPV_REMOTE_WS.filebrowser.open(path);
 });
 
 // observed properties
