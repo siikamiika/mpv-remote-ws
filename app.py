@@ -44,8 +44,12 @@ class FolderContent(object):
         self.path = Path(*path)
         if str(self.path) == 'HOME':
             self.path = Path(expanduser('~'))
-        if str(self.path) == 'WINROOT':
-            self._windows_drives()
+        if str(self.path) == 'ROOT':
+            if os.name == 'nt':
+                self._windows_drives()
+            elif os.name == 'posix':
+                self.path = Path('/')
+                self._folder_content()
         else:
             self._folder_content()
 

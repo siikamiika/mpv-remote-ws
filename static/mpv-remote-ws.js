@@ -222,9 +222,22 @@ FileBrowser.prototype = {
                 }
             }
 
+            var link = document.createElement('a');
+            link.href  = '#';
+            link.classList.add('navlink');
+            link.classList.add('top');
+            link.innerHTML = 'ROOT';
+            link.onclick = function() {
+                MPV_REMOTE_WS.filebrowser.open(['ROOT']);
+            }
+            var li = document.createElement('li');
+            li.appendChild(link);
+            path_listing.appendChild(li);
+
             for (var i = 0; i < _this.path.length; i++) {
                 var link = document.createElement('a');
                 link.href = '#';
+                link.classList.add('navlink');
                 link.innerHTML = _this.path[i];
                 activate_path_link(link, i);
                 var li = document.createElement('li');
@@ -235,15 +248,30 @@ FileBrowser.prototype = {
             sorted_content.forEach(function(i) {
                 var link = document.createElement('a');
                 link.href = '#';
-                link.innerHTML = i.path[i.path.length - 1];
-                link.onclick = function() {
-                    if (i.type == 'file') {
+                link.classList.add('contentlink');
+
+                if (i.type == 'file') {
+                    link.classList.add('file');
+                    link.onclick = function() {
                         MPV_REMOTE_WS.mp.play_file(i.path);
+                        return false;
                     }
-                    else if (i.type == 'dir')
-                        MPV_REMOTE_WS.filebrowser.open(i.path);
-                    return false;
+                    link.innerHTML = '<i class="fa fa-file-o"></i>' +
+                        '<span class="file">' + i.path[i.path.length - 1] + '</span><br>' +
+                        '<span class="modified">' + new Date(i.modified * 1000).toLocaleString() + '</span>';
                 }
+
+                else if (i.type == 'dir') {
+                    link.classList.add('folder');
+                    link.onclick = function() {
+                        MPV_REMOTE_WS.filebrowser.open(i.path);
+                        return false;
+                    }
+                    link.innerHTML = '<i class="fa fa-folder"></i>' +
+                        '<span class="folder">' + i.path[i.path.length - 1] + '</span><br>' +
+                        '<span class="modified">' + new Date(i.modified * 1000).toLocaleString() + '</span>';
+                }
+
                 var li = document.createElement('li');
                 li.appendChild(link);
                 dir_listing.appendChild(li);

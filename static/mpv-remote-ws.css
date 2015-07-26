@@ -5,6 +5,13 @@
     -moz-user-select: none;
     -ms-user-select: none;
     user-select: none;
+
+    position: fixed;
+    z-index: 1;
+    top: 1em;
+    left: 0;
+    right: 0;
+    background-color: white;
 }
 
 #remote table {
@@ -22,4 +29,63 @@ i {
 #remote .fa {
     font-size: 50px; /* fallback */
     font-size: 15vmin;
+}
+
+.navlink, .contentlink {
+    display: block;
+    background: #ccc;
+    border: 1px solid gray;
+    border-radius: 10px;
+    margin-bottom: 5px;
+    word-wrap: break-word;
+}
+
+.navlink {
+    font-size: 2em;
+    font-weight: bold;
+}
+
+.contentlink {
+    display: inline-block;
+    min-width: 200px;
+    max-width: 85%;
+}
+
+.listing {
+    margin: 0 auto;
+    width: 90%;
+    border: 1px solid #eee;
+    padding: 5px;
+}
+
+ul {
+    list-style: none;
+}
+
+a {
+    color: black;
+    text-decoration: none;
+}
+
+.video, .file, .folder{
+    word-wrap: break-word;
+}
+
+.modified {
+    font-size: 80%;
+}
+
+.navlink.top {
+    background: #555;
+}
+
+#title {
+    overflow:scroll;
+    white-space: nowrap;
+    position: fixed;
+    z-index: 2;
+    top: 0;
+    left: 0;
+    right: 0;
+    background-color: white;
 }
