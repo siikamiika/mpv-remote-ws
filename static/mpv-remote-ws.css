@@ -15,11 +15,16 @@
 }
 
 #control-toggle {
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    -khtml-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
     z-index: 2;
     position: fixed;
-    top: 0;
+    top: 15px;
     right: 0;
-    font-size: 50px;
     font-size: 10vmin;
 }
 
@@ -36,7 +41,6 @@ i {
 }
 
 #remote .fa {
-    font-size: 50px; /* fallback */
     font-size: 15vmin;
 }
 

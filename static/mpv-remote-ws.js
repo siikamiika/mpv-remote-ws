@@ -330,6 +330,9 @@ Remote.prototype = {
     render: function() {
         XHR('GET', 'static/remote.html?' + MPV_REMOTE_WS.cache_buster, null, function(data) {
             this.element.classList.remove('hide');
+            this.element.ontouchmove = function(e) {
+                if (e.target.id !== 'vol') e.preventDefault();
+            }
             document.getElementById('controls').innerHTML = data;
 
             // repeated buttons
