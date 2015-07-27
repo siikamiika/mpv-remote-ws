@@ -174,7 +174,9 @@ var FileBrowser = function() {};
 
 FileBrowser.prototype = {
 
-    open: function(path) {
+    open: function(path, from_history) {
+        if (!from_history)
+            history.pushState(path, '');
         this.get_folder_content(path, this.render);
         localStorage.last_dir = JSON.stringify(path);
     },
@@ -382,6 +384,9 @@ Remote.prototype = {
 
 // instantiation
 MPV_REMOTE_WS.filebrowser = new FileBrowser();
+window.onpopstate = function(e) {
+    MPV_REMOTE_WS.filebrowser.open(e.state, true);
+}
 MPV_REMOTE_WS.remote = new Remote();
 MPV_REMOTE_WS.mp = new MpvProcess();
 MPV_REMOTE_WS.connection = new Connection(function(){
@@ -389,7 +394,8 @@ MPV_REMOTE_WS.connection = new Connection(function(){
     if (localStorage.last_dir) {
         path = JSON.parse(localStorage.last_dir);
     }
-    MPV_REMOTE_WS.filebrowser.open(path);
+    history.replaceState(path, '');
+    MPV_REMOTE_WS.filebrowser.open(path, true);
 
     // observed properties
     var title = MPV_REMOTE_WS.mp.get_property_native('media-title', function(data) {
