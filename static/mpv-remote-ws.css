@@ -8,10 +8,19 @@
 
     position: fixed;
     z-index: 1;
-    top: 1em;
+    top: 0;
     left: 0;
     right: 0;
     background-color: white;
+}
+
+#control-toggle {
+    z-index: 2;
+    position: fixed;
+    top: 0;
+    right: 0;
+    font-size: 50px;
+    font-size: 10vmin;
 }
 
 #remote table {
@@ -82,10 +91,8 @@ a {
 #title {
     overflow:scroll;
     white-space: nowrap;
-    position: fixed;
-    z-index: 2;
-    top: 0;
-    left: 0;
-    right: 0;
-    background-color: white;
+}
+
+.hide {
+    display: none;
 }

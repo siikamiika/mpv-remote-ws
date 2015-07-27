@@ -21,24 +21,23 @@ var XHR = function(type, path, data, onready, async) {
 // websocket init
 
 var Connection = function(onopen) {
-    var _this = this;
+
     this.req_id = 0;
     this.onmessage_handlers = {};
 
-    this.ws = new WebSocket('ws://' + window.location.host + '/ws');
-
-    this.ws.onopen = onopen;
-
-    var onmessage = function(ev){
+    this.onmessage = function(ev){
         var response = JSON.parse(ev.data);
-        if (response.id in _this.onmessage_handlers) {
-            _this.onmessage_handlers[response.id](response.result);
+        if (response.id in this.onmessage_handlers) {
+            this.onmessage_handlers[response.id](response.result);
             if (typeof response.id === 'number')
-                delete _this.onmessage_handlers[response.id];
+                delete this.onmessage_handlers[response.id];
         }
-    }
+    }.bind(this);
 
-    this.ws.onmessage = onmessage;
+    this.address = 'ws://' + window.location.host + '/ws';
+    this.ws = new WebSocket(this.address);
+    this.ws.onopen = onopen;
+    this.ws.onmessage = this.onmessage;
 
     this.send = function(data, cb) {
         if (cb)
@@ -46,16 +45,16 @@ var Connection = function(onopen) {
         data.id = this.req_id;
         this.req_id += 1;
         if (this.ws.readyState !== 1) {
-            _this.ws = new WebSocket('ws://' + window.location.host + '/ws');
-            _this.ws.onmessage = onmessage;
-            _this.ws.onopen = function () {
-                _this.ws.send(JSON.stringify(data));
+            this.ws = new WebSocket(this.address);
+            this.ws.onmessage = onmessage;
+            this.ws.onopen = function () {
+                this.ws.send(JSON.stringify(data));
             }
         }
         else {
             this.ws.send(JSON.stringify(data));
         }
-    }
+    }.bind(this);
 }
 
 // mpv commands
@@ -188,7 +187,6 @@ FileBrowser.prototype = {
     },
 
     render: function(content) {
-        var _this = this;
         this.path = content.path;
         this.content = content.content;
 
@@ -220,10 +218,10 @@ FileBrowser.prototype = {
 
             var activate_path_link = function(link, i) {
                 link.onclick = function() {
-                    MPV_REMOTE_WS.filebrowser.open(_this.path.slice(0, i + 1));
+                    MPV_REMOTE_WS.filebrowser.open(this.path.slice(0, i + 1));
                     return false;
-                }
-            }
+                }.bind(this);
+            }.bind(this);
 
             var link = document.createElement('a');
             link.href  = '#';
@@ -237,11 +235,11 @@ FileBrowser.prototype = {
             li.appendChild(link);
             path_listing.appendChild(li);
 
-            for (var i = 0; i < _this.path.length; i++) {
+            for (var i = 0; i < this.path.length; i++) {
                 var link = document.createElement('a');
                 link.href = '#';
                 link.classList.add('navlink');
-                link.innerHTML = _this.path[i];
+                link.innerHTML = this.path[i];
                 activate_path_link(link, i);
                 var li = document.createElement('li');
                 li.appendChild(link);
@@ -279,7 +277,7 @@ FileBrowser.prototype = {
                 li.appendChild(link);
                 dir_listing.appendChild(li);
             });
-        });
+        }.bind(this));
 
     },
 
@@ -288,7 +286,9 @@ FileBrowser.prototype = {
     }
 }
 
-var Remote = function() {};
+var Remote = function() {
+    this.element = document.getElementById('remote');
+};
 
 
 var activate_repeating_control = function(button) {
@@ -327,7 +327,8 @@ Remote.prototype = {
 
     render: function() {
         XHR('GET', 'static/remote.html?' + MPV_REMOTE_WS.cache_buster, null, function(data) {
-            document.getElementById('remote').innerHTML = data;
+            this.element.classList.remove('hide');
+            document.getElementById('controls').innerHTML = data;
 
             // repeated buttons
             window.pressed = false;
@@ -354,11 +355,20 @@ Remote.prototype = {
             if (localStorage.volume) {
                 vol_element.value = localStorage.volume;
             }
-        });
+        }.bind(this));
     },
 
     hide: function() {
-        document.getElementById('remote').innerHTML = '';
+        this.element.classList.add('hide');
+    },
+
+    toggle: function() {
+        if (this.element.classList.contains('hide')) {
+            this.element.classList.remove('hide');
+        }
+        else {
+            this.element.classList.add('hide');
+        }
     },
 
     set_volume: function() {
