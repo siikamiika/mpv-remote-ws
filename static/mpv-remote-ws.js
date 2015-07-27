@@ -29,7 +29,7 @@ var Connection = function(onopen) {
 
     this.ws.onopen = onopen;
 
-    this.ws.onmessage = function(ev){
+    var onmessage = function(ev){
         var response = JSON.parse(ev.data);
         if (response.id in _this.onmessage_handlers) {
             _this.onmessage_handlers[response.id](response.result);
@@ -38,20 +38,23 @@ var Connection = function(onopen) {
         }
     }
 
-    this.ws.onclose = function(ev){
-
-    }
-
-    this.ws.onerror = function(ev){
-
-    }
+    this.ws.onmessage = onmessage;
 
     this.send = function(data, cb) {
         if (cb)
             this.onmessage_handlers[this.req_id] = cb;
         data.id = this.req_id;
         this.req_id += 1;
-        this.ws.send(JSON.stringify(data));
+        if (this.ws.readyState !== 1) {
+            _this.ws = new WebSocket('ws://' + window.location.host + '/ws');
+            _this.ws.onmessage = onmessage;
+            _this.ws.onopen = function () {
+                _this.ws.send(JSON.stringify(data));
+            }
+        }
+        else {
+            this.ws.send(JSON.stringify(data));
+        }
     }
 }
 
