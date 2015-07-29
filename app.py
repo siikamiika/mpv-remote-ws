@@ -4,21 +4,57 @@ from mpv_python_ipc import MpvProcess
 from pathlib import Path
 import os
 from os.path import splitext, dirname, realpath, expanduser
+from base64 import standard_b64encode, b64decode
 
 script_path = Path(dirname(realpath(__file__)))
 
 
-clients = []
+class BasicAccessAuth(object):
 
+    def __init__(self, realm, auth):
+        self.realm = realm
+        self.auth = standard_b64encode(auth)
+
+    def authenticated(self, handler):
+        auth_header = handler.request.headers.get('Authorization')
+        if auth_header == None:
+            return False
+        correct_auth = self._check_auth(auth_header)
+        if correct_auth:
+            return True
+        else:
+            print('Auth attempt from {}: {}'.format(
+                handler.request.remote_ip,
+                b64decode(auth_header[6:])
+                ))
+            return False
+
+    def request_auth(self, handler):
+        handler.set_header('WWW-Authenticate', 'Basic realm={}'.format(self.realm))
+        handler.set_status(401)
+        handler.finish()
+
+    def _check_auth(self, auth):
+        return auth == 'Basic {}'.format(self.auth.decode())
+
+
+with (script_path / 'auth').open('rb') as f:
+    basic_auth = BasicAccessAuth('mpv-remote-ws', f.read().strip())
+
+clients = []
 
 class IndexHandler(web.RequestHandler):
     def get(self):
+        if not basic_auth.authenticated(self):
+            return basic_auth.request_auth(self)
         self.render("index.html")
 
 
 class WsHandler(websocket.WebSocketHandler):
 
     def open(self):
+        if not basic_auth.authenticated(self):
+            return self.close()
         if self not in clients:
             clients.append(self)
 
