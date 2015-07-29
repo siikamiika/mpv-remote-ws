@@ -1,4 +1,6 @@
+import logging
 from tornado import websocket, web, ioloop
+from tornado.log import enable_pretty_logging
 import json
 from mpv_python_ipc import MpvProcess
 from pathlib import Path
@@ -8,6 +10,7 @@ from base64 import standard_b64encode, b64decode
 
 script_path = Path(dirname(realpath(__file__)))
 
+enable_pretty_logging()
 
 class BasicAccessAuth(object):
 
@@ -148,6 +151,7 @@ class MpvRemote(object):
     def handle_message(self, message, client):
         message = Message(message)
         response = dict(id=message.id, result=None)
+        logging.info('{}: {}'.format(message.method, message.params))
         if message.method == 'mpv_command':
             response['result'] = self.mpv_command(message.params)
         elif message.method == 'folder_content':
