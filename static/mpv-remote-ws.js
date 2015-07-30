@@ -232,6 +232,7 @@ FileBrowser.prototype = {
             link.innerHTML = 'ROOT';
             link.onclick = function() {
                 MPV_REMOTE_WS.filebrowser.open(['ROOT']);
+                return false;
             }
             var li = document.createElement('li');
             li.appendChild(link);
