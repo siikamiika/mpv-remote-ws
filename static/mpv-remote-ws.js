@@ -170,6 +170,74 @@ var sorting = function(attr, reverse) {
     }
 }
 
+var pathbutton = function(path, extra_classes) {
+    var link = document.createElement('a');
+    link.href = '#';
+    link.classList.add('navlink');
+
+    if (extra_classes) {
+        extra_classes.forEach(function(cls) {
+            link.classList.add(cls);
+        });
+    }
+
+    link.innerHTML = path[path.length - 1];
+
+    link.onclick = function() {
+        MPV_REMOTE_WS.filebrowser.open(path);
+        return false;
+    }
+
+    var li = document.createElement('li');
+    li.appendChild(link);
+    return li;
+}
+
+var contentbutton = function(item) {
+
+    var link = document.createElement('a');
+    link.href = '#';
+    link.classList.add('contentlink');
+
+    var icon = document.createElement('i');
+
+    var description = document.createElement('span');
+    description.innerHTML = item.path[item.path.length - 1];
+
+    var modified = document.createElement('span');
+    modified.className = 'modified';
+    modified.innerHTML = new Date(item.modified * 1000).toLocaleString();
+
+    var newline = document.createElement('br');
+
+    if (item.type == 'file') {
+        link.classList.add('file');
+        link.onclick = function() {
+            MPV_REMOTE_WS.mp.play_file(item.path);
+            return false;
+        }
+        icon.className = 'fa fa-file-o';
+    }
+
+    else if (item.type == 'dir') {
+        link.classList.add('folder');
+        link.onclick = function() {
+            MPV_REMOTE_WS.filebrowser.open(item.path);
+            return false;
+        }
+        icon.className = 'fa fa-folder';
+    }
+
+    link.appendChild(icon);
+    link.appendChild(description);
+    link.appendChild(newline);
+    link.appendChild(modified);
+
+    var li = document.createElement('li');
+    li.appendChild(link);
+    return li;
+}
+
 var FileBrowser = function() {};
 
 FileBrowser.prototype = {
@@ -218,68 +286,19 @@ FileBrowser.prototype = {
             document.getElementById('filebrowser-path').appendChild(path_listing);
             document.getElementById('filebrowser-content').appendChild(dir_listing);
 
-            var activate_path_link = function(link, i) {
-                link.onclick = function() {
-                    MPV_REMOTE_WS.filebrowser.open(this.path.slice(0, i + 1));
-                    return false;
-                }.bind(this);
-            }.bind(this);
-
-            var link = document.createElement('a');
-            link.href  = '#';
-            link.classList.add('navlink');
-            link.classList.add('top');
-            link.innerHTML = 'ROOT';
-            link.onclick = function() {
-                MPV_REMOTE_WS.filebrowser.open(['ROOT']);
-                return false;
-            }
-            var li = document.createElement('li');
-            li.appendChild(link);
-            path_listing.appendChild(li);
+            var root_button = pathbutton(['ROOT'], ['top']);
+            path_listing.appendChild(root_button);
 
             for (var i = 0; i < this.path.length; i++) {
-                var link = document.createElement('a');
-                link.href = '#';
-                link.classList.add('navlink');
-                link.innerHTML = this.path[i];
-                activate_path_link(link, i);
-                var li = document.createElement('li');
-                li.appendChild(link);
-                path_listing.appendChild(li);
+                var path_btn = pathbutton(this.path.slice(0, i + 1));
+                path_listing.appendChild(path_btn);
             }
 
             sorted_content.forEach(function(i) {
-                var link = document.createElement('a');
-                link.href = '#';
-                link.classList.add('contentlink');
-
-                if (i.type == 'file') {
-                    link.classList.add('file');
-                    link.onclick = function() {
-                        MPV_REMOTE_WS.mp.play_file(i.path);
-                        return false;
-                    }
-                    link.innerHTML = '<i class="fa fa-file-o"></i>' +
-                        '<span class="file">' + i.path[i.path.length - 1] + '</span><br>' +
-                        '<span class="modified">' + new Date(i.modified * 1000).toLocaleString() + '</span>';
-                }
-
-                else if (i.type == 'dir') {
-                    link.classList.add('folder');
-                    link.onclick = function() {
-                        MPV_REMOTE_WS.filebrowser.open(i.path);
-                        return false;
-                    }
-                    link.innerHTML = '<i class="fa fa-folder"></i>' +
-                        '<span class="folder">' + i.path[i.path.length - 1] + '</span><br>' +
-                        '<span class="modified">' + new Date(i.modified * 1000).toLocaleString() + '</span>';
-                }
-
-                var li = document.createElement('li');
-                li.appendChild(link);
-                dir_listing.appendChild(li);
+                var content_btn = contentbutton(i);
+                dir_listing.appendChild(content_btn);
             });
+
         }.bind(this));
 
     },
