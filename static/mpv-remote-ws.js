@@ -1,3 +1,14 @@
+// helpers
+var SetALike = function(list) {
+    var o = {};
+    for (i = 0; i < list.length; i++) {
+        o[list[i]] = true;
+    }
+    return o;
+}
+
+var video_extensions = new SetALike(['avi', 'mp4', 'mkv', 'ogv', 'ogg', 'flv', 'm4v', 'mov', 'mpg', 'mpeg', 'wmv', 'm3u']);
+
 // namespace
 var MPV_REMOTE_WS = {};
 MPV_REMOTE_WS.cache_buster = new Date().getTime();
@@ -193,6 +204,7 @@ var pathbutton = function(path, extra_classes) {
     return li;
 }
 
+
 var contentbutton = function(item) {
 
     var path_json = JSON.stringify(item.path);
@@ -219,6 +231,10 @@ var contentbutton = function(item) {
 
     if (item.type == 'file') {
         link.classList.add('file');
+        var ext = item.path[item.path.length - 1].split('.').pop();
+        if (video_extensions[ext]) {
+            link.classList.add('video');
+        }
         link.onclick = function() {
             link.classList.add('visited');
             localStorage.setItem(path_json, JSON.stringify({'visited': true}))
