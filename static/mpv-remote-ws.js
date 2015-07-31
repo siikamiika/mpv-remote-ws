@@ -195,9 +195,16 @@ var pathbutton = function(path, extra_classes) {
 
 var contentbutton = function(item) {
 
+    var path_json = JSON.stringify(item.path);
+
     var link = document.createElement('a');
     link.href = '#';
     link.classList.add('contentlink');
+
+    var visited = localStorage.getItem(path_json);
+    if (visited && JSON.parse(visited).visited) {
+        link.classList.add('visited');
+    }
 
     var icon = document.createElement('i');
 
@@ -213,6 +220,8 @@ var contentbutton = function(item) {
     if (item.type == 'file') {
         link.classList.add('file');
         link.onclick = function() {
+            link.classList.add('visited');
+            localStorage.setItem(path_json, JSON.stringify({'visited': true}))
             MPV_REMOTE_WS.mp.play_file(item.path);
             return false;
         }
