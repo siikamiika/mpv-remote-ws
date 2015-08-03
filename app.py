@@ -149,6 +149,7 @@ class MpvRemote(object):
         self.observe_properties([
             'media-title',
             'idle',
+            'pause',
             'video-aspect',
             'sub-delay',
             'audio-delay',

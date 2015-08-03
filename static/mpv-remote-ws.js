@@ -471,6 +471,15 @@ MPV_REMOTE_WS.connection = new Connection(function(){
             MPV_REMOTE_WS.remote.render();
     }
 
+    // pause
+    MPV_REMOTE_WS.connection.onmessage_handlers['pause'] = function(paused) {
+        var playpause_element = document.getElementById('playpause');
+        if (paused === true)
+            playpause_element.className = 'fa fa-play';
+        else
+            playpause_element.className = 'fa fa-pause';
+    }
+
     // video-aspect
     MPV_REMOTE_WS.connection.onmessage_handlers['video-aspect'] = function(aspect) {
         document.getElementById('video-aspect').innerHTML = Math.round(aspect * 100) / 100;
