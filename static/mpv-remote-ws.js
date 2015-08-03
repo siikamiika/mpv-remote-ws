@@ -446,21 +446,77 @@ MPV_REMOTE_WS.connection = new Connection(function(){
     MPV_REMOTE_WS.filebrowser.open(path, true);
 
     // observed properties
-    var title = MPV_REMOTE_WS.mp.get_property_native('media-title', function(data) {
-        if (data) document.getElementById('title').innerHTML = data;
+    // media-title
+    MPV_REMOTE_WS.mp.get_property_native('media-title', function(title) {
+        if (title) document.getElementById('title').innerHTML = title;
     });
-    MPV_REMOTE_WS.connection.onmessage_handlers['media-title'] = function(data) {
-        document.getElementById('title').innerHTML = data;
+    MPV_REMOTE_WS.connection.onmessage_handlers['media-title'] = function(title) {
+        document.getElementById('title').innerHTML = title;
+        // ...because mpv sends the wrong video-aspect on playback start
+        setTimeout(function() {
+            MPV_REMOTE_WS.mp.get_property_native('options/video-aspect', function(aspect) {
+                document.getElementById('video-aspect').innerHTML = Math.round(aspect * 100) / 100;
+            });
+        }, 1000);
     }
 
-    MPV_REMOTE_WS.mp.get_property_native('idle', function(data) {
-        if (!(data === true)) MPV_REMOTE_WS.remote.render();
+    // idle
+    MPV_REMOTE_WS.mp.get_property_native('idle', function(idle) {
+        if (idle !== true) MPV_REMOTE_WS.remote.render();
     });
-    MPV_REMOTE_WS.connection.onmessage_handlers['idle'] = function(data) {
-        if (data === true)
+    MPV_REMOTE_WS.connection.onmessage_handlers['idle'] = function(idle) {
+        if (idle === true)
             MPV_REMOTE_WS.remote.hide();
         else
             MPV_REMOTE_WS.remote.render();
+    }
+
+    // video-aspect
+    MPV_REMOTE_WS.connection.onmessage_handlers['video-aspect'] = function(aspect) {
+        document.getElementById('video-aspect').innerHTML = Math.round(aspect * 100) / 100;
+    }
+
+    // video-params/par
+    MPV_REMOTE_WS.connection.onmessage_handlers['video-params/par'] = function(par) {
+        document.getElementById('video-params/par').innerHTML = Math.round(par * 100) / 100;
+    }
+
+    // sub-delay
+    MPV_REMOTE_WS.connection.onmessage_handlers['sub-delay'] = function(subdelay) {
+        document.getElementById('sub-delay').innerHTML = Math.round(subdelay * 10) / 10 + ' s';
+    }
+
+    // audio-delay
+    MPV_REMOTE_WS.connection.onmessage_handlers['audio-delay'] = function(audiodelay) {
+        document.getElementById('audio-delay').innerHTML = Math.round(audiodelay * 10) / 10 + ' s';
+    }
+
+    // sid
+    MPV_REMOTE_WS.connection.onmessage_handlers['sid'] = function(sid) {
+        MPV_REMOTE_WS.mp.get_property_native('track-list', function(tracklist) {
+            var subtrack = tracklist.filter(function(track) {
+                return track.selected && track.type == 'sub';
+            });
+
+            var slang;
+            if (subtrack.length)
+                slang = subtrack[0].lang;
+            document.getElementById('sub-track').innerHTML = sid  + (slang ? (' ('+slang+')') : '');
+        });
+    }
+
+    // aid
+    MPV_REMOTE_WS.connection.onmessage_handlers['aid'] = function(aid) {
+        MPV_REMOTE_WS.mp.get_property_native('track-list', function(tracklist) {
+            var audiotrack = tracklist.filter(function(track) {
+                return track.selected && track.type == 'audio';
+            });
+
+            var alang;
+            if (audiotrack.length)
+                alang = audiotrack[0].lang;
+            document.getElementById('audio-track').innerHTML = aid + (alang ? (' ('+alang+')') : '');
+        });
     }
 });
 

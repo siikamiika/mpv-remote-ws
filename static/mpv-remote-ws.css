@@ -14,6 +14,11 @@
     background-color: rgba(255, 255, 255, 0.7);
 }
 
+.remote-info {
+    display: inline-block;
+    min-height: 1em;
+}
+
 #control-toggle {
     -webkit-touch-callout: none;
     -webkit-user-select: none;
@@ -41,7 +46,7 @@ i {
 }
 
 #remote .fa {
-    font-size: 15vmin;
+    font-size: 14vmin;
 }
 
 .navlink, .contentlink {

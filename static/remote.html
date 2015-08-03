@@ -72,9 +72,15 @@
             onclick="MPV_REMOTE_WS.mp.subdelay(-0.1);"
         ><i class="fa fa-minus"></i></span></td>
 
-        <td><span class="button control"
-            onclick="MPV_REMOTE_WS.mp.cycle_sub();"
-        ><i class="fa fa-font"></i></span></td>
+        <td>
+            <span id="sub-track" class="remote-info"></span>
+            <br>
+            <span class="button control"
+                onclick="MPV_REMOTE_WS.mp.cycle_sub();"
+            ><i class="fa fa-font"></i></span>
+            <br>
+            <span id="sub-delay" class="remote-info"></span>
+        </td>
 
         <td><span class="button control repeat"
             onclick="MPV_REMOTE_WS.mp.subdelay(+0.1);"
@@ -84,9 +90,15 @@
             onclick="MPV_REMOTE_WS.mp.audiodelay(-0.1);"
         ><i class="fa fa-minus"></i></span></td>
 
-        <td><span class="button control"
-            onclick="MPV_REMOTE_WS.mp.cycle_audio();"
-        ><i class="fa fa-music"></i></span></td>
+        <td>
+            <span id="audio-track" class="remote-info"></span>
+            <br>
+            <span class="button control"
+                onclick="MPV_REMOTE_WS.mp.cycle_audio();"
+            ><i class="fa fa-music"></i></span>
+            <br>
+            <span id="audio-delay" class="remote-info"></span>
+        </td>
 
         <td><span class="button control repeat"
             onclick="MPV_REMOTE_WS.mp.audiodelay(+0.1);"
@@ -101,9 +113,14 @@
 
         <td style="width: 20%;"></td>
 
-        <td><span class="button control"
-            onclick="MPV_REMOTE_WS.mp.cycle_aspect();"
-        ><i class="fa fa-arrows-alt"></i></span></td>
+        <td>
+            <span class="button control"
+                onclick="MPV_REMOTE_WS.mp.cycle_aspect();"
+            ><i class="fa fa-arrows-alt"></i>
+            <br>
+            <span id="video-aspect" class="remote-info"></span> / <span id="video-params/par" class="remote-info"></span>
+            </span>
+        </td>
 
         <td><span class="button control"
             onclick="MPV_REMOTE_WS.mp.commandv(['osd-msg-bar', 'show-progress']);"
