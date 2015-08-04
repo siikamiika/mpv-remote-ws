@@ -374,7 +374,6 @@ Remote.prototype = {
 
     render: function() {
         XHR('GET', 'static/remote.html?' + MPV_REMOTE_WS.cache_buster, null, function(data) {
-            this.element.classList.remove('hide');
             this.element.ontouchmove = function(e) {
                 if (e.target.id !== 'vol') e.preventDefault();
             }
@@ -412,6 +411,10 @@ Remote.prototype = {
         this.element.classList.add('hide');
     },
 
+    show: function() {
+        this.element.classList.remove('hide');
+    },
+
     toggle: function() {
         if (this.element.classList.contains('hide')) {
             this.element.classList.remove('hide');
@@ -436,6 +439,7 @@ window.onpopstate = function(e) {
     MPV_REMOTE_WS.filebrowser.open(e.state, true);
 }
 MPV_REMOTE_WS.remote = new Remote();
+MPV_REMOTE_WS.remote.render();
 MPV_REMOTE_WS.mp = new MpvProcess();
 MPV_REMOTE_WS.connection = new Connection(function(){
     var path = ['HOME'];
@@ -452,23 +456,17 @@ MPV_REMOTE_WS.connection = new Connection(function(){
     });
     MPV_REMOTE_WS.connection.onmessage_handlers['media-title'] = function(title) {
         document.getElementById('title').innerHTML = title;
-        // ...because mpv sends the wrong video-aspect on playback start
-        setTimeout(function() {
-            MPV_REMOTE_WS.mp.get_property_native('options/video-aspect', function(aspect) {
-                document.getElementById('video-aspect').innerHTML = Math.round(aspect * 100) / 100;
-            });
-        }, 1000);
     }
 
     // idle
     MPV_REMOTE_WS.mp.get_property_native('idle', function(idle) {
-        if (idle !== true) MPV_REMOTE_WS.remote.render();
+        if (idle !== true) MPV_REMOTE_WS.remote.show();
     });
     MPV_REMOTE_WS.connection.onmessage_handlers['idle'] = function(idle) {
         if (idle === true)
             MPV_REMOTE_WS.remote.hide();
         else
-            MPV_REMOTE_WS.remote.render();
+            MPV_REMOTE_WS.remote.show();
     }
 
     // pause
@@ -502,6 +500,7 @@ MPV_REMOTE_WS.connection = new Connection(function(){
 
     // sid
     MPV_REMOTE_WS.connection.onmessage_handlers['sid'] = function(sid) {
+        if (!sid) return;
         MPV_REMOTE_WS.mp.get_property_native('track-list', function(tracklist) {
             var subtrack = tracklist.filter(function(track) {
                 return track.selected && track.type == 'sub';
@@ -516,6 +515,7 @@ MPV_REMOTE_WS.connection = new Connection(function(){
 
     // aid
     MPV_REMOTE_WS.connection.onmessage_handlers['aid'] = function(aid) {
+        if (!aid) return;
         MPV_REMOTE_WS.mp.get_property_native('track-list', function(tracklist) {
             var audiotrack = tracklist.filter(function(track) {
                 return track.selected && track.type == 'audio';
