@@ -57,10 +57,10 @@ var Connection = function(onopen) {
         this.req_id += 1;
         if (this.ws.readyState !== 1) {
             this.ws = new WebSocket(this.address);
-            this.ws.onmessage = onmessage;
+            this.ws.onmessage = this.onmessage;
             this.ws.onopen = function () {
                 this.ws.send(JSON.stringify(data));
-            }
+            }.bind(this);
         }
         else {
             this.ws.send(JSON.stringify(data));
